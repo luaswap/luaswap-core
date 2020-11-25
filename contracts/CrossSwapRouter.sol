@@ -126,43 +126,42 @@ contract CrossSwapRouter is
     //     if (msg.value > amounts[0]) TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
     // }
 
-    function _crossPairFor(address tokenA, address tokenB) internal view returns (address pair) {
-        address pairAddress = IUniswapV2Factory(factoryLua).getPair(tokenA, tokenB);
-        if (pairAddress != address(0)) {
-            return pairAddress;
+    function _crossPairForAndFee(address tokenA, address tokenB) internal view returns (address pair, uint fee) {
+        address luaPair = IUniswapV2Factory(factoryLua).getPair(tokenA, tokenB);
+        if (pair == address(0)) {
+            address uniPair = IUniswapV2Factory(factoryUni).getPair(tokenA, tokenB);
+            address sushiPair = IUniswapV2Factory(factorySushi).getPair(tokenA, tokenB);
+            if (uniPair != address(0) && sushiPair != address(0)) {
+                if (IERC20(uniPair).totalSupply() > IERC20(sushiPair).totalSupply()) {
+                    return (uniPair, 3);
+                }
+                else {
+                    return (sushiPair, 3);
+                }
+            }
+            else if (uniPair != address(0)) {
+                return (uniPair, 3);
+            }
+            else if (sushiPair != address(0)) {
+                return (sushiPair, 3);
+            }
         }
-
-        pairAddress = IUniswapV2Factory(factoryUni).getPair(tokenA, tokenB);
-        if (pairAddress != address(0)) {
-            return pairAddress;
-        }
-
-        pairAddress = IUniswapV2Factory(factorySushi).getPair(tokenA, tokenB);
-        if (pairAddress != address(0)) {
-            return pairAddress;
+        else {
+            return (luaPair, 4);
         }
     }
 
+    function _crossPairFor(address tokenA, address tokenB) internal view returns (address pair) {
+        (pair, ) = _crossPairForAndFee(tokenA, tokenB);
+    }
+
     function _crossPairInfo(address tokenA, address tokenB) internal view returns (address pair, uint swapFee, uint reserveA, uint reserveB) {
-        pair = IUniswapV2Factory(factoryLua).getPair(tokenA, tokenB);
-        if (pair != address(0)) {
-            swapFee = 4;
-        }
-
-        if (pair == address(0)) {
-            swapFee = 3;
-            pair = IUniswapV2Factory(factoryUni).getPair(tokenA, tokenB);
-        }
-
-        if (pair == address(0)) {
-            pair = IUniswapV2Factory(factorySushi).getPair(tokenA, tokenB);
-        }
+        (pair, swapFee) = _crossPairForAndFee(tokenA, tokenB);
 
         (address token0,) = UniswapV2Library.sortTokens(tokenA, tokenB);
         (uint reserve0, uint reserve1,) = IUniswapV2Pair(pair).getReserves();
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
-
 
     function getCrossAmountsOut(uint amountIn, address[] memory path)
         public
