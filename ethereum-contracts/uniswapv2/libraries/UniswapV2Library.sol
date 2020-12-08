@@ -61,7 +61,6 @@ library UniswapV2Library {
         for (uint i; i < path.length - 1; i++) {
             (uint reserveIn, uint reserveOut) = getReserves(factory, path[i], path[i + 1]);
             amounts[i + 1] = getAmountOut(amounts[i], reserveIn, reserveOut, swapFee);
-            amounts[i + 1] = amounts[i + 1].sub(IUniswapV2Factory(factory).getTransferFee(path[i + 1], amounts[i + 1]));
         }
     }
 
@@ -72,7 +71,6 @@ library UniswapV2Library {
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {
             (uint reserveIn, uint reserveOut) = getReserves(factory, path[i - 1], path[i]);
-            amounts[i] = amounts[i].add(IUniswapV2Factory(factory).getTransferFee(path[i], amounts[i]));
             amounts[i - 1] = getAmountIn(amounts[i], reserveIn, reserveOut, swapFee);
         }
     }

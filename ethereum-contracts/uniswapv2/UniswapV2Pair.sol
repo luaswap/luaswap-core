@@ -177,8 +177,6 @@ contract UniswapV2Pair is UniswapV2ERC20 {
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         require(amount0 > 0 && amount1 > 0, 'UniswapV2: INSUFFICIENT_LIQUIDITY_BURNED');
         _burn(address(this), liquidity);
-        amount0 = amount0.sub(IUniswapV2Factory(factory).getTransferFee(_token0, amount0));
-        amount1 = amount1.sub(IUniswapV2Factory(factory).getTransferFee(_token1, amount1));
         _safeTransfer(_token0, to, amount0);
         _safeTransfer(_token1, to, amount1);
         balance0 = IERC20(_token0).balanceOf(address(this));
@@ -201,14 +199,8 @@ contract UniswapV2Pair is UniswapV2ERC20 {
         address _token0 = token0;
         address _token1 = token1;
         require(to != _token0 && to != _token1, 'UniswapV2: INVALID_TO');
-        if (amount0Out > 0) {
-            amount0Out = amount0Out.sub(IUniswapV2Factory(factory).getTransferFee(_token0, amount0Out));
-            _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
-        }
-        if (amount1Out > 0) {
-            amount1Out = amount1Out.sub(IUniswapV2Factory(factory).getTransferFee(_token0, amount1Out));
-            _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
-        }
+        if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
+        if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
         if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
         balance0 = IERC20(_token0).balanceOf(address(this));
         balance1 = IERC20(_token1).balanceOf(address(this));
@@ -231,12 +223,8 @@ contract UniswapV2Pair is UniswapV2ERC20 {
     function skim(address to) external lock {
         address _token0 = token0; // gas savings
         address _token1 = token1; // gas savings
-        uint256 amount0 = IERC20(_token0).balanceOf(address(this)).sub(reserve0);
-        uint256 amount1 = IERC20(_token1).balanceOf(address(this)).sub(reserve1);
-        amount0 = amount0.sub(IUniswapV2Factory(factory).getTransferFee(_token0, amount0));
-        amount1 = amount1.sub(IUniswapV2Factory(factory).getTransferFee(_token1, amount1));
-        _safeTransfer(_token0, to, amount0);
-        _safeTransfer(_token1, to, amount1);
+        _safeTransfer(_token0, to, IERC20(_token0).balanceOf(address(this)).sub(reserve0));
+        _safeTransfer(_token1, to, IERC20(_token1).balanceOf(address(this)).sub(reserve1));
     }
 
     // force reserves to match balances
