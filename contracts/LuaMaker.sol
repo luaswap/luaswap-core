@@ -93,16 +93,17 @@ contract LuaMaker  is Ownable {
         
         IUniswapV2Pair pair = IUniswapV2Pair(factory.getPair(token0, token1));
         pair.transfer(address(pair), pair.balanceOf(address(this)));
-        pair.burn(address(this));
+        (uint amount0, uint amount1) = pair.burn(address(this));
+
         _safeApproveForRouterV2(token0);
         _safeApproveForRouterV2(token1);
 
-        _toBaseToken(token0);
-        _toBaseToken(token1);
+        _toBaseToken(token0, amount0);
+        _toBaseToken(token1, amount1);
 
         if (IERC20(weth).balanceOf(address(this)) > 0) {
           _safeApproveForRouterV2(weth);
-          _swap(weth, lua);
+          _swap(weth, lua, IERC20(weth).balanceOf(address(this)));
         }
 
         if (IERC20(lua).balanceOf(address(this)) > 0) {
@@ -110,13 +111,13 @@ contract LuaMaker  is Ownable {
         }
     }
 
-    function _swap(address token0, address token1) internal {
+    function _swap(address token0, address token1, uint amountIn) internal {
       if (factory.getPair(token0, token1) != address(0)) {
         address[] memory path = new address[](2);
         path[0] = token0;
         path[1] = token1;
         routerv2.swapExactTokensForTokens(
-          IERC20(token0).balanceOf(address(this)), 
+          amountIn, 
           0, 
           path, 
           address(this), 
@@ -128,14 +129,14 @@ contract LuaMaker  is Ownable {
       return factory.getPair(token0, token1) != address(0);
     }
 
-    function _toBaseToken(address token) internal {
+    function _toBaseToken(address token, uint amountIn) internal {
       if (token == lua) return;
 
       if (_canSwap(token, lua)) {
-        _swap(token, lua);
+        _swap(token, lua, amountIn);
       }
       else if (_canSwap(token, weth)) {
-        _swap(token, weth);
+        _swap(token, weth, amountIn);
       }
     }
 
