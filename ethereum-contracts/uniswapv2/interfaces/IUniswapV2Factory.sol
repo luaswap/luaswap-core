@@ -11,15 +11,11 @@ interface IUniswapV2Factory {
     function feeSetter() external view returns (address);
     function migrator() external view returns (address);
 
-    function isTRC21(address token) external view returns (bool);
     function getPair(address tokenA, address tokenB) external view returns (address pair);
     function allPairs(uint) external view returns (address pair);
     function allPairsLength() external view returns (uint);
-    function getTransferFee(address token, uint256 amount) external view returns (uint256);
 
     function createPair(address tokenA, address tokenB) external returns (address pair);
-    function createPairTRC21(address tokenA, address tokenB, bool AIsTRC21, bool BIsTRC21) external returns (address pair);
-    function setIsTRC21(address token) external;
 
     function setFeeTo(address) external;
     function setWithdrawFeeTo(address) external;

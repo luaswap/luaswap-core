@@ -134,7 +134,6 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
             address(this),
             deadline
         );
-        amountToken = amountToken.sub(IUniswapV2Factory(factory).getTransferFee(token, amountToken));
         TransferHelper.safeTransfer(token, to, amountToken);
         IWETH(WETH).withdraw(amountETH);
         TransferHelper.safeTransferETH(to, amountETH);
@@ -187,9 +186,7 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
             address(this),
             deadline
         );
-        uint256 amountToken = IERC20(token).balanceOf(address(this));
-        amountToken = amountToken.sub(IUniswapV2Factory(factory).getTransferFee(token, amountToken));
-        TransferHelper.safeTransfer(token, to, amountToken);
+        TransferHelper.safeTransfer(token, to, IERC20(token).balanceOf(address(this)));
         IWETH(WETH).withdraw(amountETH);
         TransferHelper.safeTransferETH(to, amountETH);
     }
