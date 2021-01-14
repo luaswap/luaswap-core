@@ -1,7 +1,6 @@
 pragma solidity =0.6.12;
 
 import './interfaces/IUniswapV2Factory.sol';
-import './interfaces/ITRC21.sol';
 import './UniswapV2Pair.sol';
 
 contract UniswapV2Factory is IUniswapV2Factory {
@@ -14,7 +13,6 @@ contract UniswapV2Factory is IUniswapV2Factory {
     address public override feeSetter;
     address public override migrator;
 
-    mapping(address => bool) public override isTRC21;
     mapping(address => mapping(address => address)) public override getPair;
     address[] public override allPairs;
 
@@ -32,13 +30,6 @@ contract UniswapV2Factory is IUniswapV2Factory {
         return keccak256(type(UniswapV2Pair).creationCode);
     }
 
-    function getTransferFee(address token, uint256 amount) external override view returns (uint256) {
-        if (isTRC21[token]) {
-            return ITRC21(token).estimateFee(amount);
-        }
-        return 0;
-    }
-
     function createPair(address tokenA, address tokenB) external override returns (address pair) {
         require(tokenA != tokenB, 'UniswapV2: IDENTICAL_ADDRESSES');
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
@@ -54,37 +45,6 @@ contract UniswapV2Factory is IUniswapV2Factory {
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
         emit PairCreated(token0, token1, pair, allPairs.length);
-    }
-
-    function createPairTRC21(address tokenA, address tokenB, bool AIsTRC21, bool BIsTRC21) external override returns (address pair) {
-        require(tokenA != tokenB, 'UniswapV2: IDENTICAL_ADDRESSES');
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'UniswapV2: ZERO_ADDRESS');
-        require(getPair[token0][token1] == address(0), 'UniswapV2: PAIR_EXISTS'); // single check is sufficient
-        bytes memory bytecode = type(UniswapV2Pair).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-        assembly {
-            pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
-        UniswapV2Pair(pair).initialize(token0, token1);
-        getPair[token0][token1] = pair;
-        getPair[token1][token0] = pair; // populate mapping in the reverse direction
-        allPairs.push(pair);
-        emit PairCreated(token0, token1, pair, allPairs.length);
-
-        if (AIsTRC21 && ITRC21(tokenA).minFee() >= 0 && ITRC21(tokenA).estimateFee(0) >= 0) {
-            isTRC21[tokenA] = true;
-        }
-
-        if (BIsTRC21 && ITRC21(tokenB).minFee() >= 0 && ITRC21(tokenB).estimateFee(0) >= 0) {
-            isTRC21[tokenB] = true;
-        }
-    }
-
-    function setIsTRC21(address token) external override {
-        if (ITRC21(token).minFee() >= 0 && ITRC21(token).estimateFee(0) >= 0) {
-            isTRC21[token] = true;
-        }
     }
 
     function setFeeTo(address _feeTo) external override {
