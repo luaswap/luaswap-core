@@ -10,8 +10,9 @@ https://luaswap.org |
 
 Feel free to read the code. More details coming soon.
 
-## Deployed Contracts / Hash
+## [ETHEREUM] Deployed Contracts
 
+- InitHash - 0xf176ce2ef2ec9c3333f7ab282e4269fdd75024da47415e2c7c6e04272fc1bfab
 - LuaToken - https://etherscan.io/address/0xB1f66997A5760428D3a87D68b90BfE0aE64121cC
 - LuaMasterFarmer - https://etherscan.io/address/0xb67d7a6644d9e191cac4da2b88d6817351c7ff62
 - TimeLock - https://etherscan.io/address/0xdc127cca2f0f059af6a414ec6da19a92a6b3812c
@@ -20,3 +21,14 @@ Feel free to read the code. More details coming soon.
 - Migrator - https://etherscan.io/address/0x0eA7dc413C6209112101b6Ef99a27F9Ed56B4A4b
 - LuaSafe - https://etherscan.io/address/0x9abf23f4e439d695a7fd341a1b25873c50cfa52e
 - LuaMaker - https://etherscan.io/address/0x0fcb3b6232a2ad0af2f0602acd759d634743579f
+
+## [TOMOCHAIN] Deployed Contracs
+
+- InitHash - 0xdb97fca50f04565472504aea8301c967285be031e5bdd131140734c3759d7015
+- LUAToken - 0x7262fa193e9590b2e075c3c16170f3f2f32f5c74
+- WTOMO - 0xB1f66997A5760428D3a87D68b90BfE0aE64121cC
+- Multicall- 0xb67D7a6644d9E191Cac4DA2B88D6817351C7fF62
+- UniswapV2Factory - 0x28c79368257CD71A122409330ad2bEBA7277a396
+- UniswapV2Router02 - 0x0b792a01Fd3E8b3e23aaaA28561c3E774A82AA7b
+- LuaSafe - 0xd6393b5bDC65f94Af3edcc653aB14120fF274199
+- LuaMaker - 0xF5bF43C60B3ef1eCf6B5676767957749845F9401
