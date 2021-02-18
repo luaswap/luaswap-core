@@ -5,3 +5,4 @@ deploy.js
 deploy.sh
 sushiswap-master
 zscript
+yarn.lock
