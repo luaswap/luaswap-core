@@ -8,11 +8,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract LuaVault is Ownable {
-    IERC20 lua;
-    address master;
+    IERC20 public lua;
+    address public master;
     
-    constructor(IERC20 _lua, address _master) public {
+    constructor(IERC20 _lua) public {
         lua = _lua;
+    }
+
+    function setMaster(address _master) public onlyOwner {
         master = _master;
     }
 

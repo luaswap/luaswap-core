@@ -82,6 +82,7 @@ contract LuaMasterFarmer is Ownable {
         luaVault = _luaVault;
         devaddr = _devaddr;
         REWARD_PER_BLOCK = _rewardPerBlock;
+        _startBlock = _startBlock == 0 ? block.number : _startBlock;
         START_BLOCK = _startBlock;
         for (uint256 i = 0; i < REWARD_MULTIPLIER.length - 1; i++) {
             uint256 halvingAtBlock = _halvingAfterBlock.mul(i + 1).add(_startBlock);
