@@ -11,10 +11,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./LuaVault.sol";
 
 
-interface IMigratorToLuaSwap {
-    function migrate(IERC20 token) external returns (IERC20);
-}
-
 contract LuaMasterFarmer is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -60,8 +56,7 @@ contract LuaMasterFarmer is Ownable {
     uint256 public constant PERCENT_FOR_DEV = 10; // 10% reward for dev
 
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
-    IMigratorToLuaSwap public migrator;
-
+    
     // Info of each pool.
     PoolInfo[] public poolInfo;
     mapping(address => uint256) public poolId1; // poolId1 count from 1, subtraction 1 before using with poolInfo
@@ -122,21 +117,6 @@ contract LuaMasterFarmer is Ownable {
         }
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
         poolInfo[_pid].allocPoint = _allocPoint;
-    }
-
-    function setMigrator(IMigratorToLuaSwap _migrator) public onlyOwner {
-        migrator = _migrator;
-    }
-
-    function migrate(uint256 _pid) public {
-        require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IERC20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IERC20 newLpToken = migrator.migrate(lpToken);
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
     }
 
     function massUpdatePools() public {
