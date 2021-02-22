@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity 0.6.12;
+pragma solidity 0.6.6;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./uniswapv2/UniswapV2ERC20.sol";
@@ -42,6 +42,11 @@ contract LuaMargin is UniswapV2ERC20 {
         }));
     }
 
+    modifier onlyOwner() {
+        require(msg.sender == owner, "LuaMargin: only owner");
+        _;
+    }
+
     modifier ensure(uint deadline) {
         require(deadline >= block.timestamp, 'LuaMargin: EXPIRED');
         _;
@@ -51,6 +56,7 @@ contract LuaMargin is UniswapV2ERC20 {
         (bool success, bytes memory data) = _token.call(abi.encodeWithSelector(SELECTOR_TRANSFER, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'LuaMargin: TRANSFER_FAILED');
     }
+
     function _safeTransferFrom(address _token, address from, address to, uint value) private {
         (bool success, bytes memory data) = _token.call(abi.encodeWithSelector(SELECTOR_TRANSFER_FROM, from, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), 'LuaMargin: TRANSFER_FROM_FAILED');
@@ -61,7 +67,7 @@ contract LuaMargin is UniswapV2ERC20 {
       supportTokens[_token] = true;
     }
 
-    function removePair(address _token) public {
+    function removeToken(address _token) public {
       supportTokens[_token] = false;
     }
     
@@ -79,7 +85,6 @@ contract LuaMargin is UniswapV2ERC20 {
         
         reserve = reserve.add(_amount);
     }
-    
     
     function withdraw(uint _lpAmount) public {
         
@@ -189,6 +194,7 @@ contract LuaMargin is UniswapV2ERC20 {
         require(p.amount > 0, "LuaMargin: wrong pid");
         _safeTransferFrom(p.token, msg.sender, address(this), _collateral);
         p.collateral = p.collateral.add(_collateral);
+        
     }
 
     function removeFund(uint pid) public {
