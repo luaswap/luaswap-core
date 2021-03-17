@@ -181,8 +181,8 @@ contract LuaMasterFarmer is Ownable {
             forFarmer = luaCanMint;
         }
         else {
-            forDev = devaddr == address(0) ? 0 : amount.mul(PERCENT_FOR_DEV).div(100);
-            forFarmer = amount;
+            forDev = devaddr == address(0) ? 0 : luaCanMint.mul(PERCENT_FOR_DEV).div(100);
+            forFarmer = luaCanMint.sub(forDev);
         }
     }
 
