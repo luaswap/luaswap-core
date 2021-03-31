@@ -2,7 +2,6 @@
 
 pragma solidity 0.6.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -38,7 +37,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
     );
 
     event Loan(address indexed add, uint256 amount);
-    event Repay(address indexed add, uint256 loanAmount, uint256 payBackAmount);
+    event Repay(address indexed add, uint256 loanAmount, uint256 fee);
     event FlashLoan(address indexed add, address target, uint256 amount);
 
     constructor(address _token) public {
@@ -163,23 +162,22 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         bytes calldata _data
     ) public {
         uint256 beforeBalance = poolBalance();
-        uint256 needSendBackAmount = _amount.mul(1000 + feeFlashLoan).div(1000);
+        uint256 fee = _amount.mul(1000 + feeFlashLoan).div(1000);
         token.safeTransfer(_target, _amount);
         if (_data.length > 0) {
             ILuaPoolCallee(_target).luaPoolCall(
                 _amount,
-                needSendBackAmount,
+                fee,
                 msg.sender,
                 _data
             );
         }
         uint256 afterBalance = poolBalance();
-        uint256 backAmount = afterBalance.sub(beforeBalance);
         require(
-            backAmount >= needSendBackAmount,
+            afterBalance.sub(beforeBalance) >= fee,
             "LuaPool: Oops, you have not pay enough flash loan fee"
         );
-        reserve = reserve.add(backAmount).sub(_amount);
+        reserve = reserve.add(afterBalance).sub(beforeBalance);
         emit FlashLoan(msg.sender, _target, _amount);
     }
 
