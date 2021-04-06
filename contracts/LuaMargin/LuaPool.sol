@@ -20,7 +20,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IERC20 public token;
+    address public token;
     uint256 public reserve;
     uint256 public totalRequestWithdraw;
     uint256 public totalLoan;
@@ -28,6 +28,8 @@ contract LuaPool is UniswapV2ERC20, Ownable {
     mapping(address => bool) public verifiedMiddleMan;
 
     uint256 public feeFlashLoan = 1;    // 1/1000 = 0.1%
+
+    uint private unlocked = 1;
 
     event RequestWithdraw(
         address indexed add,
@@ -41,7 +43,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
     event FlashLoan(address indexed add, address target, uint256 amount);
 
     constructor(address _token) public {
-        token = IERC20(_token);
+        token = _token;
     }
 
     modifier onlyMiddleMan() {
@@ -54,8 +56,17 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         _;
     }
 
+
+    modifier lock() {
+        require(unlocked == 1, 'UniswapV2: LOCKED');
+        unlocked = 0;
+        _;
+        unlocked = 1;
+    }
+
+
     function poolBalance() public view returns (uint256) {
-        return token.balanceOf(address(this));
+        return IERC20(token).balanceOf(address(this));
     }
 
     function maxAmountForLoan() public view returns (uint256) {
@@ -92,6 +103,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
 
     function requestWithdraw(uint256 _lpAmount)
         public
+        lock
         correctBalance(msg.sender, _lpAmount)
     {
         uint256 withdrawAmount = convertLPToAmount(_lpAmount);
@@ -119,6 +131,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
 
     function withdraw(uint256 _lpAmount)
         public
+        lock
         correctBalance(msg.sender, _lpAmount)
     {
         uint256 withdrawAmount = convertLPToAmount(_lpAmount);
@@ -129,7 +142,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         );
 
         _burn(msg.sender, _lpAmount);
-        token.safeTransfer(msg.sender, withdrawAmount);
+        IERC20(token).safeTransfer(msg.sender, withdrawAmount);
 
         reserve = reserve.sub(withdrawAmount);
 
@@ -144,8 +157,8 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         }
     }
 
-    function deposit(uint256 _amount) public {
-        token.safeTransferFrom(msg.sender, address(this), _amount);
+    function deposit(uint256 _amount) public lock {
+        IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
 
         if (reserve == 0) {
             _mint(msg.sender, _amount);
@@ -160,10 +173,10 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         address _target,
         uint256 _amount,
         bytes calldata _data
-    ) public {
+    ) public lock {
         uint256 beforeBalance = poolBalance();
         uint256 fee = _amount.mul(1000 + feeFlashLoan).div(1000);
-        token.safeTransfer(_target, _amount);
+        IERC20(token).safeTransfer(_target, _amount);
         if (_data.length > 0) {
             ILuaPoolCallee(_target).luaPoolCall(
                 _amount,
@@ -181,13 +194,13 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         emit FlashLoan(msg.sender, _target, _amount);
     }
 
-    function loan(uint256 _amount) public onlyMiddleMan {
-        token.safeTransfer(msg.sender, _amount);
+    function loan(uint256 _amount) public lock onlyMiddleMan {
+        IERC20(token).safeTransfer(msg.sender, _amount);
         totalLoan = totalLoan.add(_amount);
         emit Loan(msg.sender, _amount);
     }
 
-    function repay(uint256 _loanAmount, uint256 _payBackAmount) public onlyMiddleMan {
+    function repay(uint256 _loanAmount, uint256 _payBackAmount) public lock onlyMiddleMan {
         reserve = reserve.add(_payBackAmount).sub(_loanAmount);
         totalLoan = totalLoan.sub(_loanAmount);
         emit Repay(msg.sender, _loanAmount, _payBackAmount);
