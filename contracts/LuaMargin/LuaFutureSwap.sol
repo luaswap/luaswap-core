@@ -153,6 +153,9 @@ contract LuaFutureSwap is Ownable {
         repayAmount = value > repayAmount ? repayAmount : value;
         value = value.sub(repayAmount);
 
+        IERC20(pool.token()).safeTransfer(p.owner, value);
+        _repay(_borrowing, repayAmount);
+
         p.collateral = p.collateral.sub(_collateral);
         p.borrowing = p.borrowing.sub(_borrowing);
         p.amount = p.amount.sub(_amount);
@@ -160,9 +163,6 @@ contract LuaFutureSwap is Ownable {
         if (p.amount == 0) {
             _removePostionIdOfUser(_pid, p.owner);
         }
-
-        IERC20(pool.token()).safeTransfer(p.owner, value);
-        _repay(_borrowing, repayAmount);
     }
 
     function _getAmountOut(address _tokenIn, uint256 _amountIn)

@@ -56,14 +56,12 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         _;
     }
 
-
     modifier lock() {
         require(unlocked == 1, 'UniswapV2: LOCKED');
         unlocked = 0;
         _;
         unlocked = 1;
     }
-
 
     function poolBalance() public view returns (uint256) {
         return IERC20(token).balanceOf(address(this));
