@@ -1,6 +1,4 @@
-
 const { expectRevert, time, BN } = require('@openzeppelin/test-helpers')
-const { assertion } = require('@openzeppelin/test-helpers/src/expectRevert')
 const LuaPool = artifacts.require('LuaPool')
 const MockERC20 = artifacts.require('MockERC20')
 
