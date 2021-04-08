@@ -42,7 +42,6 @@ async function position(pid) {
     console.log('borrowing:', p.borrowing.toString())
     console.log('amount:', p.amount.toString())
     console.log('openedAtBlock:', p.openedAtBlock.toString())
-    console.log('duration:', p.duration.toString())
     console.log('owner:', p.owner.toString())
     if (v) {
         console.log('out: ', v, `(${Math.round(v / (p.collateral.toNumber() + p.borrowing.toNumber()) * 100)})`)
@@ -85,18 +84,33 @@ contract('LuaFutureSwap', ([owner, alice, bob, carol, minter]) => {
         that = this;
     })
 
-    it('Correct setting', async () => {
-        assert.equal(await this.LuaFutureSwap.BORROW_FEE(), 50);
-        assert.equal(await this.LuaFutureSwap.MAX_LEVERAGE(), 5);
-        assert.equal(await this.LuaFutureSwap.MAX_LEVERAGE_PERCENT_OF_POOL(), 3);
-        assert.equal(await this.LuaFutureSwap.DEFAULT_DURATION(), 500000);
-    })
-
     it('Open position', async () => {
         await this.LuaFutureSwap.openPosition(100, 400, 0, 99999999999, { from: alice });
-        assert.equal(await this.LuaFutureSwap.positionIdOf(alice), 1)
+        assert.equal(await this.LuaFutureSwap.positionIdsOf(alice, 0), 1)
         await this.LuaFutureSwap.openPosition(300, 500, 0, 99999999999, { from: alice });
-        assert.equal(await this.LuaFutureSwap.positionIdOf(alice), 1)
+        assert.equal(await this.LuaFutureSwap.positionIdsOf(alice, 1), 2)
+
+        assert.equal(await this.USDT.balanceOf(alice), 1600)
+        var p1 = await this.LuaFutureSwap.positions(1);
+        assert.equal(p1.collateral, 100)
+        assert.equal(p1.borrowing, 400)
+
+        var p2 = await this.LuaFutureSwap.positions(2);
+        assert.equal(p2.collateral, 300)
+        assert.equal(p2.borrowing, 500)
+
+        assert.equal(await this.LuaFutureSwap.numberOfPosition(alice), 2)
+        assert.equal(await this.WETH.balanceOf(this.LuaFutureSwap.address), p1.amount.toNumber() + p2.amount.toNumber())
+        assert.equal(await this.LuaFutureSwap.numberOfPosition(alice), 2)
+    })
+
+    it('expand position', async () => {
+        await this.LuaFutureSwap.openPosition(100, 400, 0, 99999999999, { from: alice });
+        await this.LuaFutureSwap.expandPosition(1, 300, 500, 0, 99999999999, { from: alice });
+
+        assert.equal(await this.LuaFutureSwap.positionIdsOf(alice, 0), 1)
+        assert.equal(await this.LuaFutureSwap.numberOfPosition(alice), 1)
+
         assert.equal(await this.USDT.balanceOf(alice), 1600)
         var p = await this.LuaFutureSwap.positions(1);
         assert.equal(p.collateral, 400)
@@ -109,25 +123,26 @@ contract('LuaFutureSwap', ([owner, alice, bob, carol, minter]) => {
         assert.equal(await this.USDT.balanceOf(alice), 1600)
         var p = await this.LuaFutureSwap.positions(1);
         assert.equal(p.collateral, 400)
-        assert.equal(p.borrowing, 100)
+        assert.equal(p.borrowing, 115)
     })
 
     it('Close position', async () => {
         await this.LuaFutureSwap.openPosition(100, 400, 0, 99999999999, { from: alice });
-        assert.equal(await this.LuaFutureSwap.positionIdOf(alice), 1)
-        // await this.LuaFutureSwap.openPosition(300, 500, 0, 99999999999, { from: alice });
-        await balance(alice, 'alice')
-        assert.equal(await this.LuaFutureSwap.positionIdOf(alice), 1)
-        // assert.equal(await this.USDT.balanceOf(alice), 1600)
         var p = await this.LuaFutureSwap.positions(1);
-        // assert.equal(p.collateral, 400)
-        // assert.equal(p.borrowing, 900)
-        await position(1)
         await this.LuaFutureSwap.closePosition(1, p.amount / 2, { from: alice });
-        await position(1)
+        var p2 = await this.LuaFutureSwap.positions(1);
+        assert.equal(p2.collateral, 50)
+        assert.equal(p2.borrowing, 200)
+        assert.equal(p2.amount, p.amount / 2)
 
         await this.LuaFutureSwap.closePosition(1, p.amount - p.amount / 2, { from: alice });
-        await position(1)
-        await balance(alice, 'alice')
+        p2 = await this.LuaFutureSwap.positions(1);
+        assert.equal(p2.collateral, 0)
+        assert.equal(p2.borrowing, 0)
+        assert.equal(p2.amount, 0)
+        assert.equal(await this.LuaFutureSwap.numberOfPosition(alice), 0)
+        assert.equal(await this.USDT.balanceOf(this.LuaPool.address), 10020)
+        assert.equal(await this.USDT.balanceOf(this.LuaFutureSwap.address), 0)
+        assert.equal(await this.WETH.balanceOf(this.LuaFutureSwap.address), 0)
     })
 })

@@ -24,7 +24,7 @@ contract LuaFutureSwap is Ownable {
     uint256 public constant MAX_LEVERAGE = 5;
     uint256 public constant POSITION_DURATION = 500000;
 
-    mapping(address => uint256) public positionIdOf;
+    mapping(address => uint256[]) public positionIdsOf;
     Position[] public positions;
 
     uint256 private unlocked = 1;
@@ -104,7 +104,11 @@ contract LuaFutureSwap is Ownable {
         _;
     }
 
-    function _takeTokenFromSender(uint256 _amount) {
+    function numberOfPosition(address user) public view returns (uint256) {
+        return positionIdsOf[user].length;
+    }
+
+    function _takeTokenFromSender(uint256 _amount) private {
         IERC20(pool.token()).safeTransferFrom(
             msg.sender,
             address(this),
@@ -112,9 +116,20 @@ contract LuaFutureSwap is Ownable {
         );
     }
 
-    function _repay(uint256 _borrowing, uint256 _repayAmount) {
+    function _repay(uint256 _borrowing, uint256 _repayAmount) private {
         IERC20(pool.token()).safeTransfer(address(pool), _repayAmount);
         pool.repay(_borrowing, _repayAmount);
+    }
+
+    function _removePostionIdOfUser(uint256 _pid, address _user) private {
+        uint256[] memory ids = positionIdsOf[_user];
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (ids[i] == _pid) {
+                positionIdsOf[_user][i] = positionIdsOf[_user][ids.length - 1];
+                positionIdsOf[_user].pop();
+                break;
+            }
+        }
     }
 
     function _closePosition(uint256 _pid, uint256 _amount) private {
@@ -137,7 +152,7 @@ contract LuaFutureSwap is Ownable {
         p.amount = p.amount.sub(_amount);
 
         if (p.amount == 0) {
-            positionIdOf[p.owner] = 0;
+            _removePostionIdOfUser(_pid, p.owner);
         }
 
         IERC20(pool.token()).safeTransfer(p.owner, value);
@@ -197,7 +212,6 @@ contract LuaFutureSwap is Ownable {
     }
 
     function openPosition(
-        uint256 _pid,
         uint256 _collateral,
         uint256 _borrowing,
         uint256 _amountOutMin,
@@ -209,33 +223,44 @@ contract LuaFutureSwap is Ownable {
         correctBorrowing(_borrowing, _collateral)
         returns (uint256 pid, uint256 amountOut)
     {
-        require(
-            _pid == 0 || positions[_pid].owner == msg.sender,
-            "LuaMargin: wrong pid"
-        );
-
         _takeTokenFromSender(_collateral);
         amountOut = _loanThenSwap(_borrowing, _collateral, _amountOutMin);
 
-        if (_pid == 0) {
-            pid = positions.length;
-            positionIdOf[_owner] = pid;
-            positions.push(
-                Position({
-                    collateral: _collateral,
-                    borrowing: _borrowing,
-                    amount: _amount,
-                    openedAtBlock: block.number,
-                    owner: _owner
-                })
-            );
-        } else {
-            pid = _pid;
-            Position storage p = positions[pid];
-            p.collateral = p.collateral.add(_collateral);
-            p.borrowing = p.borrowing.add(_borrowing);
-            p.amount = p.amount.add(_amount);
-        }
+        pid = positions.length;
+        positionIdsOf[msg.sender].push(pid);
+        positions.push(
+            Position({
+                collateral: _collateral,
+                borrowing: _borrowing,
+                amount: amountOut,
+                openedAtBlock: block.number,
+                owner: msg.sender
+            })
+        );
+    }
+
+    function expandPosition(
+        uint256 _pid,
+        uint256 _collateral,
+        uint256 _borrowing,
+        uint256 _amountOutMin,
+        uint256 _deadline
+    )
+        public
+        lock
+        ensure(_deadline)
+        correctBorrowing(_borrowing, _collateral)
+        ownerPosition(_pid)
+        returns (uint256 amountOut)
+    {
+        _takeTokenFromSender(_collateral);
+        amountOut = _loanThenSwap(_borrowing, _collateral, _amountOutMin);
+
+        Position storage p = positions[_pid];
+
+        p.collateral = p.collateral.add(_collateral);
+        p.borrowing = p.borrowing.add(_borrowing);
+        p.amount = p.amount.add(amountOut);
     }
 
     function addMoreFund(uint256 _pid, uint256 _amount)
