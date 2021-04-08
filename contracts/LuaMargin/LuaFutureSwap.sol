@@ -37,6 +37,12 @@ contract LuaFutureSwap is Ownable {
         address owner;
     }
 
+    event OpenPosition(address indexed add, uint pid, uint collateral, uint borrowing, uint amountOut);
+    event ExpandPosition(address indexed add, uint pid, uint collateral, uint borrowing, uint amountOut);
+    event AddMoreFund(address indexed add, uint pid, uint amount, uint newCollateral, uint newBorrowing);
+    event ClosePosition(address indexed add, uint pid, uint amount);
+    event LiquidatePosition(address indexed caller, address add, uint pid, uint collateral, uint borrowing);
+
     constructor(
         address _token,
         address _pool,
@@ -237,6 +243,8 @@ contract LuaFutureSwap is Ownable {
                 owner: msg.sender
             })
         );
+
+        emit OpenPosition(msg.sender, pid, _collateral, _borrowing, amountOut);
     }
 
     function expandPosition(
@@ -261,6 +269,8 @@ contract LuaFutureSwap is Ownable {
         p.collateral = p.collateral.add(_collateral);
         p.borrowing = p.borrowing.add(_borrowing);
         p.amount = p.amount.add(amountOut);
+
+        emit ExpandPosition(msg.sender, _pid, _collateral, _borrowing, amountOut);
     }
 
     function addMoreFund(uint256 _pid, uint256 _amount)
@@ -280,6 +290,8 @@ contract LuaFutureSwap is Ownable {
 
         _takeTokenFromSender(_amount);
         _repay(_borrowing, _amount);
+
+        emit AddMoreFund(msg.sender, _pid, _amount, p.collateral, p.borrowing);
     }
 
     function closePosition(uint256 _pid, uint256 _amount)
@@ -289,6 +301,7 @@ contract LuaFutureSwap is Ownable {
         ownerPosition(_pid)
     {
         _closePosition(_pid, _amount);
+        emit ClosePosition(msg.sender, _pid, _amount);
     }
 
     function liquidate(uint256 _pid) public lock existPosition(_pid) {
@@ -303,5 +316,7 @@ contract LuaFutureSwap is Ownable {
         );
 
         _closePosition(_pid, positions[_pid].amount);
+
+        emit LiquidatePosition(msg.sender, p.owner, _pid, p.collateral, p.borrowing);
     }
 }
