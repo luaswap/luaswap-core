@@ -104,7 +104,7 @@ contract('LuaFutureSwap', ([owner, alice, bob, carol, minter]) => {
         assert.equal(await this.LuaFutureSwap.numberOfPosition(alice), 2)
     })
 
-    it('expand position', async () => {
+    it('Expand position', async () => {
         await this.LuaFutureSwap.openPosition(100, 400, 0, 99999999999, { from: alice });
         await this.LuaFutureSwap.expandPosition(1, 300, 500, 0, 99999999999, { from: alice });
 
@@ -144,5 +144,18 @@ contract('LuaFutureSwap', ([owner, alice, bob, carol, minter]) => {
         assert.equal(await this.USDT.balanceOf(this.LuaPool.address), 10020)
         assert.equal(await this.USDT.balanceOf(this.LuaFutureSwap.address), 0)
         assert.equal(await this.WETH.balanceOf(this.LuaFutureSwap.address), 0)
+
+        await expectRevert(this.LuaFutureSwap.expandPosition(1, 100, 400, 0, 99999999999, { from: alice }), "LuaMargin: wrong pid or postion was close")
+        await expectRevert(this.LuaFutureSwap.addMoreFund(1, 100, { from: alice }), "LuaMargin: wrong pid or postion was close")
+    })
+
+    it('Liquidate position', async () => {
+        await this.LuaFutureSwap.openPosition(100, 400, 0, 99999999999, { from: alice });
+        await position(1)
+        await expectRevert(this.LuaFutureSwap.liquidate(1, { from: bob }), "LuaMargin: Cannot liquidate position")
+        await time.advanceBlockTo(130);
+        await this.LuaFutureSwap.liquidate(1, { from: bob })
+        await position(1);
+        await balance(alice, 'alice');
     })
 })

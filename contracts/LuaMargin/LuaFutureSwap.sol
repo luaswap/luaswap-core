@@ -22,7 +22,7 @@ contract LuaFutureSwap is Ownable {
 
     uint256 public constant RISK_LIQIDATION = 80; // liquidate if borrowing = 80% of value of amount
     uint256 public constant MAX_LEVERAGE = 5;
-    uint256 public constant POSITION_DURATION = 500000;
+    uint256 public constant POSITION_DURATION = 20; // blocks
 
     mapping(address => uint256[]) public positionIdsOf;
     Position[] public positions;
@@ -75,12 +75,12 @@ contract LuaFutureSwap is Ownable {
     }
 
     modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "UniswapV2Router: EXPIRED");
+        require(deadline >= block.timestamp, "LuaMargin: EXPIRED");
         _;
     }
 
     modifier lock() {
-        require(unlocked == 1, "UniswapV2: LOCKED");
+        require(unlocked == 1, "LuaMargin: LOCKED");
         unlocked = 0;
         _;
         unlocked = 1;
@@ -257,6 +257,7 @@ contract LuaFutureSwap is Ownable {
         public
         lock
         ensure(_deadline)
+        existPosition(_pid)
         correctBorrowing(_borrowing, _collateral)
         ownerPosition(_pid)
         returns (uint256 amountOut)

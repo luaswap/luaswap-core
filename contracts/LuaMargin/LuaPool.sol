@@ -24,7 +24,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
     uint256 public reserve;
     uint256 public totalRequestWithdraw;
     uint256 public totalLoan;
-    mapping(address => uint256) public userReqestWithdraw;
+    mapping(address => uint256) public requestWithdrawAmount;
     mapping(address => bool) public verifiedMiddleMan;
 
     uint256 public feeFlashLoan = 1;    // 1/1000 = 0.1%
@@ -57,7 +57,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
     }
 
     modifier lock() {
-        require(unlocked == 1, 'UniswapV2: LOCKED');
+        require(unlocked == 1, 'LuaPool: LOCKED');
         unlocked = 0;
         _;
         unlocked = 1;
@@ -79,7 +79,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         view
         returns (uint256)
     {
-        uint256 _currentRequest = userReqestWithdraw[_staker];
+        uint256 _currentRequest = requestWithdrawAmount[_staker];
         uint256 _poolBalance = poolBalance();
         uint256 _totalRequest = totalRequestWithdraw.sub(_currentRequest);
 
@@ -111,13 +111,13 @@ contract LuaPool is UniswapV2ERC20, Ownable {
             "LuaPool: You can withdraw now"
         );
 
-        uint256 currentRequest = userReqestWithdraw[msg.sender];
+        uint256 currentRequest = requestWithdrawAmount[msg.sender];
 
         totalRequestWithdraw = totalRequestWithdraw.sub(currentRequest).add(
             withdrawAmount
         );
 
-        userReqestWithdraw[msg.sender] = withdrawAmount;
+        requestWithdrawAmount[msg.sender] = withdrawAmount;
 
         emit RequestWithdraw(
             msg.sender,
@@ -133,6 +133,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         correctBalance(msg.sender, _lpAmount)
     {
         uint256 withdrawAmount = convertLPToAmount(_lpAmount);
+        uint256 currentRequest = requestWithdrawAmount[msg.sender];
 
         require(
             withdrawAmount <= canWithdrawImediatelyAmount(msg.sender),
@@ -144,13 +145,11 @@ contract LuaPool is UniswapV2ERC20, Ownable {
 
         reserve = reserve.sub(withdrawAmount);
 
-        uint256 currentRequest = userReqestWithdraw[msg.sender];
-
         if (currentRequest > withdrawAmount) {
-            userReqestWithdraw[msg.sender] = currentRequest.sub(withdrawAmount);
+            requestWithdrawAmount[msg.sender] = currentRequest.sub(withdrawAmount);
             totalRequestWithdraw = totalRequestWithdraw.sub(withdrawAmount);
         } else {
-            userReqestWithdraw[msg.sender] = 0;
+            requestWithdrawAmount[msg.sender] = 0;
             totalRequestWithdraw = totalRequestWithdraw.sub(currentRequest);
         }
     }
