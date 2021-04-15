@@ -7,15 +7,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../uniswapv2/UniswapV2ERC20.sol";
 
-interface ILuaPoolCallee {
-    function luaPoolCall(
-        uint256 amount,
-        uint256 sendBackAmount,
-        address sender,
-        bytes calldata data
-    ) external;
-}
-
 contract LuaPool is UniswapV2ERC20, Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -27,8 +18,6 @@ contract LuaPool is UniswapV2ERC20, Ownable {
     mapping(address => uint256) public requestWithdrawAmount;
     mapping(address => bool) public verifiedMiddleMan;
 
-    uint256 public feeFlashLoan = 1;    // 1/1000 = 0.1%
-
     uint private unlocked = 1;
 
     event RequestWithdraw(
@@ -38,6 +27,8 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         uint256 newAmount
     );
 
+    event Deposit(address indexed add, uint amount);
+    event Withdraw(address indexed add, uint lpAmount, uint amount);
     event Loan(address indexed add, uint256 amount);
     event Repay(address indexed add, uint256 loanAmount, uint256 fee);
     event FlashLoan(address indexed add, address target, uint256 amount);
@@ -152,6 +143,24 @@ contract LuaPool is UniswapV2ERC20, Ownable {
             requestWithdrawAmount[msg.sender] = 0;
             totalRequestWithdraw = totalRequestWithdraw.sub(currentRequest);
         }
+
+        emit Withdraw(msg.sender, _lpAmount, withdrawAmount);
+    }
+
+    function sendTokenAfterRequestWithdraw(address add) public lock {
+        uint256 withdrawAmount = requestWithdrawAmount[add];
+        uint256 lpAmount = withdrawAmount.mul(totalSupply) / reserve;
+        require(withdrawAmount > 0, "LuaPool: No request withdraw");
+        require(
+            withdrawAmount <= canWithdrawImediatelyAmount(add),
+            "LuaPool: not enough balance"
+        );
+
+        _burn(add, lpAmount);
+        IERC20(token).safeTransfer(add, withdrawAmount);
+        requestWithdrawAmount[add] = 0;
+        totalRequestWithdraw = totalRequestWithdraw.sub(withdrawAmount);
+        emit Withdraw(msg.sender, lpAmount, withdrawAmount);
     }
 
     function deposit(uint256 _amount) public lock {
@@ -164,31 +173,7 @@ contract LuaPool is UniswapV2ERC20, Ownable {
         }
 
         reserve = reserve.add(_amount);
-    }
-
-    function flashLoan(
-        address _target,
-        uint256 _amount,
-        bytes calldata _data
-    ) public lock {
-        uint256 beforeBalance = poolBalance();
-        uint256 fee = _amount.mul(1000 + feeFlashLoan).div(1000);
-        IERC20(token).safeTransfer(_target, _amount);
-        if (_data.length > 0) {
-            ILuaPoolCallee(_target).luaPoolCall(
-                _amount,
-                fee,
-                msg.sender,
-                _data
-            );
-        }
-        uint256 afterBalance = poolBalance();
-        require(
-            afterBalance.sub(beforeBalance) >= fee,
-            "LuaPool: Oops, you have not pay enough flash loan fee"
-        );
-        reserve = reserve.add(afterBalance).sub(beforeBalance);
-        emit FlashLoan(msg.sender, _target, _amount);
+        emit Deposit(msg.sender, _amount);
     }
 
     function loan(uint256 _amount) public lock onlyMiddleMan {

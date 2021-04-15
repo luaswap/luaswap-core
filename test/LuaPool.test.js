@@ -17,7 +17,6 @@ contract('LuaPool', ([alice, bob, carol, middleMan, minter]) => {
         assert.equal(await this.LuaPool.token(), this.USDT.address);
         assert.equal(await this.LuaPool.reserve(), 0);
         assert.equal(await this.LuaPool.totalRequestWithdraw(), 0);
-        assert.equal(await this.LuaPool.feeFlashLoan(), 1);
     })
 
     it('Correct deposit and withdraw', async () => {
