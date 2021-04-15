@@ -144,7 +144,9 @@ contract LuaMasterFarmer is Ownable {
         if (luaForDev > 0) {
             luaVault.send(devaddr, luaForDev);
         }
-        luaVault.send(address(this), luaForFarmer);
+        if (luaForFarmer > 0) {
+            luaVault.send(address(this), luaForFarmer);
+        }
         pool.accLuaPerShare = pool.accLuaPerShare.add(luaForFarmer.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
