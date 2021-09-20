@@ -1,3 +1,4 @@
+pragma solidity ^0.6.6;
 interface ITRC21 {
 	function totalSupply() external view returns (uint256);
 	function balanceOf(address who) external view returns (uint256);
