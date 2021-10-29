@@ -6,3 +6,7 @@ deploy.sh
 sushiswap-master
 zscript
 yarn.lock
+crawReward1
+crawReward2
+crawRewardCurrent
+crawRewardFinal

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 // LuaMasterFarmer
-pragma solidity 0.6.12;
+pragma solidity >=0.6.0 <0.8.0;
 
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -46,7 +46,7 @@ contract LuaMasterFarmer is Ownable {
     // LUA tokens created per block.
     uint256 public REWARD_PER_BLOCK;
     // Bonus muliplier for early LUA makers.
-    uint256[] public REWARD_MULTIPLIER = [128, 128, 64, 32, 16, 8, 4, 2, 1];
+    uint256[] public REWARD_MULTIPLIER = [1, 0];
     uint256[] public HALVING_AT_BLOCK; // init in constructor function
     uint256 public FINISH_BONUS_AT_BLOCK;
 
@@ -141,6 +141,11 @@ contract LuaMasterFarmer is Ownable {
         uint256 luaForFarmer;
         (luaForDev, luaForFarmer) = getPoolReward(pool.lastRewardBlock, block.number, pool.allocPoint);
         
+        if (luaForFarmer == 0) {
+            pool.lastRewardBlock = block.number;
+            return;
+        }
+
         if (luaForDev > 0) {
             luaVault.send(devaddr, luaForDev);
         }
