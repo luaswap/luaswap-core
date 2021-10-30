@@ -22,8 +22,8 @@ contract('LuaVault', ([alice, dev, luaAddr, minter]) => {
     })
 
     it('should allow owner or Master to send token', async () => {
-        await this.vault.send(this.LuaToken.address, '1000', { from: alice })
-        assert.equal((await this.LuaToken.balanceOf(this.LuaToken.address)).valueOf(), '1000');
+        await this.vault.send(luaAddr, '1000', { from: alice })
+        assert.equal((await this.LuaToken.balanceOf(luaAddr)).valueOf(), '1000');
         //await this.vault.send(this.LuaToken.address, '1000', { from: this.chef.address })
         // assert.equal((await this.LuaToken.balanceOf(this.LuaToken.address)).valueOf(), '1000');
     })

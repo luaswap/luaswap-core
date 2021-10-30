@@ -37,6 +37,7 @@ contract LuaMasterFarmer is Ownable {
         uint256 allocPoint;       // How many allocation points assigned to this pool. LUAs to distribute per block.
         uint256 lastRewardBlock;  // Last block number that LUAs distribution occurs.
         uint256 accLuaPerShare; // Accumulated LUAs per share, times 1e12. See below.
+        uint256 accRewardPerShare; // Accumulated Rewards per share, times 1e12. See below.
     }
 
     IERC20 public lua;
@@ -108,7 +109,8 @@ contract LuaMasterFarmer is Ownable {
             lpToken: _lpToken,
             allocPoint: _allocPoint,
             lastRewardBlock: lastRewardBlock,
-            accLuaPerShare: 0
+            accLuaPerShare: 0,
+            accRewardPerShare: 0
         }));
     }
 

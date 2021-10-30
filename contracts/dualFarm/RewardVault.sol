@@ -8,13 +8,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-contract LuaVault is Ownable {
-    IERC20 public lua;
+contract RewardVault is Ownable {
+    IERC20 public rewardToken;
     address public master;
     using SafeERC20 for IERC20;
     
-    constructor(IERC20 _lua) public {
-        lua = _lua;
+    constructor(IERC20 _rewardToken) public {
+        rewardToken = _rewardToken;
     }
 
     function setMaster(address _master) public onlyOwner {
@@ -23,7 +23,7 @@ contract LuaVault is Ownable {
 
     function send(address _to, uint256 _amount) public {
         require(msg.sender == owner() || msg.sender == master);
-        lua.transfer(_to, _amount);
+        rewardToken.transfer(_to, _amount);
     }
 
     function emergencyWithdraw(address _token, address payable _to) external onlyOwner {
