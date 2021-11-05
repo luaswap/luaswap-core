@@ -2,18 +2,17 @@
 
 pragma solidity 0.6.6;
 
-
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-contract LuaVault is Ownable {
+contract LuaVault is AccessControl {
     IERC20 public lua;
     address public master;
     using SafeERC20 for IERC20;
     
-    constructor(IERC20 _lua) public {
+    constructor(IERC20 _lua, address _owner) public AccessControl(_owner) {
         lua = _lua;
     }
 

@@ -11,9 +11,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import '../uniswapv2/interfaces/IUniswapV2Pair.sol';
 import "./LuaVault.sol";
 import "./RewardVault.sol";
+import "./Factory.sol";
 
-
-contract LuaMasterFarmer is Ownable {
+contract LuaMasterFarmer is Ownable, Factory {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -47,8 +47,6 @@ contract LuaMasterFarmer is Ownable {
     IERC20 public rewardToken;
     LuaVault public luaVault;
     RewardVault public rewardVault;
-    // Dev address.
-    address public devaddr;
     // Reward tokens created per block.
     uint256 public REWARD_PER_BLOCK;    
     // LUA tokens created per block.
@@ -61,8 +59,6 @@ contract LuaMasterFarmer is Ownable {
 
     // The block number when LUA mining starts.
     uint256 public START_BLOCK;
-
-    uint256 public constant PERCENT_FOR_DEV = 10; // 10% reward for dev
 
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     
@@ -77,14 +73,11 @@ contract LuaMasterFarmer is Ownable {
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event SendLuaReward(address indexed user, uint256 indexed pid, uint256 amount);
+    event SendReward(address indexed user, uint256 indexed pid, uint256 amount);
 
     constructor(
         IERC20 _lua,
         IERC20 _rewardToken,
-        LuaVault _luaVault,
-        RewardVault _rewardVault,
-        address _devaddr,
         uint256 _rewardPerBlock,
         uint256 _luaRewardPerBlock,
         uint256 _startBlock,
@@ -92,9 +85,10 @@ contract LuaMasterFarmer is Ownable {
     ) public {
         lua = _lua;
         rewardToken = _rewardToken;
-        luaVault = _luaVault;
-        rewardVault = _rewardVault;
-        devaddr = _devaddr;
+        luaVault = new LuaVault(_lua, msg.sender);
+        register(address(luaVault));
+        rewardVault = new RewardVault(_rewardToken, msg.sender);
+        register(address(rewardVault));
         REWARD_PER_BLOCK = _rewardPerBlock;
         LUA_REWARD_PER_BLOCK = _luaRewardPerBlock;
         _startBlock = _startBlock == 0 ? block.number : _startBlock;
@@ -228,6 +222,20 @@ contract LuaMasterFarmer is Ownable {
         return user.amount.mul(accRewardPerShare).div(1e12).sub(user.rewardDebt);
     }
 
+    function pendingLuaReward(uint256 _pid, address _user) external view returns (uint256) {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][_user];
+        uint256 accLuaPerShare = pool.accLuaPerShare;
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
+        if (block.number > pool.lastRewardBlock && lpSupply > 0) {
+            uint256 luaForFarmer;
+            (luaForFarmer, ) = getPoolReward(pool.lastRewardBlock, block.number, pool.allocPoint);
+            accLuaPerShare = accLuaPerShare.add(luaForFarmer.mul(1e12).div(lpSupply));
+
+        }
+        return user.amount.mul(accLuaPerShare).div(1e12).sub(user.luaDebt);
+    }    
+
     function claimReward(uint256 _pid) public {
         updatePool(_pid);
         _harvest(_pid);
@@ -258,7 +266,7 @@ contract LuaMasterFarmer is Ownable {
             if(pendingRewardAmount > 0) {
                 rewardToken.transfer(msg.sender, pendingRewardAmount);
                 user.rewardDebtAtBlock = block.number;
-                emit SendLuaReward(msg.sender, _pid, pendingRewardAmount);
+                emit SendReward(msg.sender, _pid, pendingRewardAmount);
             }            
 
             user.rewardDebt = user.amount.mul(pool.accRewardPerShare).div(1e12);
@@ -310,11 +318,6 @@ contract LuaMasterFarmer is Ownable {
         user.luaDebt = 0;
     }
 
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
-    }
     function getNewRewardPerBlock(uint256 pid1) public view returns (uint256) {
         uint256 multiplier = getMultiplier(block.number -1, block.number);
         if (pid1 == 0) {
@@ -343,8 +346,15 @@ contract LuaMasterFarmer is Ownable {
     }
 
     function updateRewardManual(uint256 newRewardPerBlock) public onlyOwner {
-        
         massUpdatePools();
         REWARD_PER_BLOCK = newRewardPerBlock;
-    }    
+    }  
+
+    function emergencyWithdrawLuaReward(address payable _to) external onlyOwner {
+        IERC20(lua).safeTransfer(_to, IERC20(lua).balanceOf(address(this)));
+    }   
+
+    function emergencyWithdrawTokenReward(address payable _to) external onlyOwner {
+        IERC20(rewardToken).safeTransfer(_to, IERC20(rewardToken).balanceOf(address(this)));
+    }             
 }
