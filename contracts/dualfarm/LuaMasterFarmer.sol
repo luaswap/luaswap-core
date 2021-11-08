@@ -59,6 +59,9 @@ contract LuaMasterFarmer is Ownable, Factory {
 
     // The block number when LUA mining starts.
     uint256 public START_BLOCK;
+    uint256 public MAX_REWARD = 100e18; 
+
+    address public operator;
 
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     
@@ -83,6 +86,7 @@ contract LuaMasterFarmer is Ownable, Factory {
         uint256 _startBlock,
         uint256 _halvingAfterBlock
     ) public {
+        operator = msg.sender;
         lua = _lua;
         rewardToken = _rewardToken;
         luaVault = new LuaVault(_lua, msg.sender);
@@ -99,6 +103,11 @@ contract LuaMasterFarmer is Ownable, Factory {
         }
         FINISH_BONUS_AT_BLOCK = _halvingAfterBlock.mul(REWARD_MULTIPLIER.length - 1).add(_startBlock);
         HALVING_AT_BLOCK.push(uint256(-1));
+    }
+
+    modifier onlyOperator() {
+        require(operator == msg.sender, "Not operator");
+        _;
     }
 
     function poolLength() external view returns (uint256) {
@@ -331,8 +340,16 @@ contract LuaMasterFarmer is Ownable, Factory {
         }
     }
 
-    function updateReward(uint256 maxReward, uint256 minReward, uint256 apr) public onlyOwner {
-        
+    function updateHardMaxReward(uint max) public onlyOwner {
+        MAX_REWARD = max;
+    }
+
+    function setOperator(address _operator) public onlyOwner {
+        operator = _operator;
+    }
+
+    function updateReward(uint256 maxReward, uint256 minReward, uint256 apr) public onlyOperator {
+        require(maxReward <= MAX_REWARD, "WRONG MAX REWARD");
         massUpdatePools();
 
         IUniswapV2Pair pair = IUniswapV2Pair(address(poolInfo[0].lpToken));
@@ -345,7 +362,7 @@ contract LuaMasterFarmer is Ownable, Factory {
         REWARD_PER_BLOCK = REWARD_PER_BLOCK < minReward? minReward : REWARD_PER_BLOCK;
     }
 
-    function updateRewardManual(uint256 newRewardPerBlock) public onlyOwner {
+    function updateRewardManual(uint256 newRewardPerBlock) public onlyOperator {
         massUpdatePools();
         REWARD_PER_BLOCK = newRewardPerBlock;
     }  
